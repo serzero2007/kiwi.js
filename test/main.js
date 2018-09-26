@@ -2,6 +2,9 @@
 var assert = (typeof window === "undefined") ? require("assert") : window.chai.assert;
 var kiwi = (typeof window === "undefined") ? require("../lib/kiwi.js") : window.kiwi;
 
+
+
+
 describe("kiwi", function() {
     it("create Solver", function() {
         var solver = new kiwi.Solver();
@@ -249,5 +252,69 @@ describe("kiwi", function() {
             solver.updateVariables();
             assert.equal(bottom.value, 300);
         });
+
+        it("should be correct",
+        function createKiwiSolver() {
+            var solver = new kiwi.Solver();
+            var strength = new kiwi.Strength.create(0, 900, 1000);
+
+            // super-view
+            var superView = {
+                left: new kiwi.Variable(),
+                top: new kiwi.Variable(),
+                width: new kiwi.Variable(),
+                height: new kiwi.Variable(),
+                right: new kiwi.Variable(),
+                bottom: new kiwi.Variable()
+            };
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression(superView.left), kiwi.Operator.Eq));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression(superView.top), kiwi.Operator.Eq));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, superView.right], superView.left, superView.width), kiwi.Operator.Eq));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, superView.bottom], superView.top, superView.height), kiwi.Operator.Eq));
+            solver.addEditVariable(superView.width, kiwi.Strength.create(999, 1000, 1000));
+            solver.addEditVariable(superView.height, kiwi.Strength.create(999, 1000, 1000));
+            solver.suggestValue(superView.width, 300);
+            solver.suggestValue(superView.height, 200);
+
+            // subView1
+            var subView1 = {
+                left: new kiwi.Variable(),
+                top: new kiwi.Variable(),
+                width: new kiwi.Variable(),
+                height: new kiwi.Variable(),
+                right: new kiwi.Variable(),
+                bottom: new kiwi.Variable()
+            };
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.right], subView1.left, subView1.width), kiwi.Operator.Eq));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.bottom], subView1.top, subView1.height), kiwi.Operator.Eq));
+
+            // subView2
+            var subView2 = {
+                left: new kiwi.Variable(),
+                top: new kiwi.Variable(),
+                width: new kiwi.Variable(),
+                height: new kiwi.Variable(),
+                right: new kiwi.Variable(),
+                bottom: new kiwi.Variable()
+            };
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView2.right], subView2.left, subView2.width), kiwi.Operator.Eq));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView2.bottom], subView2.top, subView2.height), kiwi.Operator.Eq));
+
+            // Position sub-views in super-view
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.left], superView.left), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.top], superView.top), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.bottom], superView.bottom), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.width], subView2.width), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView1.right], subView2.left), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView2.right], superView.right), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView2.top], superView.top), kiwi.Operator.Eq, undefined, strength));
+            solver.addConstraint(new kiwi.Constraint(new kiwi.Expression([-1, subView2.bottom], superView.bottom), kiwi.Operator.Eq, undefined, strength));
+
+            // Calculate
+            solver.updateVariables();
+
+            assert.equal(subView1.width.value, 150);
+            assert.equal(subView2.left.value, 150);
+        })
     });
 });
