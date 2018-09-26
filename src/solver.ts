@@ -617,45 +617,29 @@ class Solver {
      * @private
      */
     private _getMarkerLeavingISymbol( marker: ISymbol ): ISymbol {
-        const dmax = Number.MAX_VALUE;
-        let r1 = dmax;
-        let r2 = dmax;
-        const invalid = INVALID_SYMBOL;
-        let first = invalid;
-        let second = invalid;
-        let third = invalid;
+        let r1 = Number.MAX_VALUE, r2 = Number.MAX_VALUE;
+        let first  = null, second = null, third  = null;
+
         const rows = this.rows;
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             const pair = rows.itemAt( i );
             const row = pair.second;
-            let c = row.coefficientFor( marker );
-            if ( c === 0.0 ) {
-                continue;
-            }
             const symbol = pair.first;
+
+            const c = row.coefficientFor( marker );
+            if (c === 0.0) continue;
+            const r = Math.abs(row.constant) / c;
+
             if ( symbol.type === ISymbolType.External ) {
                 third = symbol;
-            } else if ( c < 0.0 ) {
-                const r = -row.constant / c;
-                if ( r < r1 ) {
-                    r1 = r;
-                    first = symbol;
-                }
-            } else {
-                const r = row.constant / c;
-                if ( r < r2 ) {
-                    r2 = r;
-                    second = symbol;
-                }
+                continue
             }
+
+            if (c < 0.0 && r < r1) { r1 = r; first = symbol; }
+            if (c > 0.0 && r < r2) { r2 = r; second = symbol; }
         }
-        if ( first !== invalid ) {
-            return first;
-        }
-        if ( second !== invalid ) {
-            return second;
-        }
-        return third;
+
+        return first || second || third || INVALID_SYMBOL
     }
 
     /**
@@ -715,9 +699,9 @@ class Solver {
     }
 
     private constraints = createMap<Constraint, ITag>( Constraint.Compare );
-    private rows  = createMap<ISymbol, Row>( ISymbol.Compare );
-    private vars  = createMap<Variable, ISymbol>( Variable.Compare );
-    private edits = createMap<Variable, IEditInfo>( Variable.Compare );
+    private rows        = createMap<ISymbol, Row>( ISymbol.Compare );
+    private vars        = createMap<Variable, ISymbol>( Variable.Compare );
+    private edits       = createMap<Variable, IEditInfo>( Variable.Compare );
     private _infeasibleRows: ISymbol[] = [];
     private objective: Row = new Row();
     private _artificial: Row = null;
