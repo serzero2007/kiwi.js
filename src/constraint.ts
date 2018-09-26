@@ -42,71 +42,39 @@ enum Operator {
  */
 export
 class Constraint {
-    constructor(
-        expression: Expression|Variable,
-        operator: Operator,
-        rhs?: Expression|Variable|number,
-        strength: number = Strength.required) {
-        this._operator = operator;
-        this._strength = Strength.clip(strength);
-        if ((rhs === undefined) && (expression instanceof Expression)) {
-            this._expression = expression;
-        } else {
-            this._expression = expression.minus(rhs);
-        }
-    }
 
     /**
      * A static constraint comparison function.
      * @private
      */
-    public static Compare( a: Constraint, b: Constraint ): number {
-        return a.id() - b.id();
+    public static Compare(a: Constraint, b: Constraint): number {
+        return a.id - b.id;
     }
 
-    /**
-     * Returns the unique id number of the constraint.
-     * @private
-     */
-    public id(): number {
-        return this._id;
-    }
+    public expression: Expression;
+    public strength: number;
+    public id: number = CnId++;
 
-    /**
-     * Returns the expression of the constraint.
-     *
-     * @return {Expression} expression
-     */
-    public expression(): Expression {
-        return this._expression;
-    }
-
-    /**
-     * Returns the relational operator of the constraint.
-     *
-     * @return {Operator} linear constraint operator
-     */
-    public op(): Operator {
-        return this._operator;
-    }
-
-    /**
-     * Returns the strength of the constraint.
-     *
-     * @return {Number} strength
-     */
-    public strength(): number {
-        return this._strength;
+    constructor(
+      expression: Expression|Variable,
+      public operator: Operator,
+      rhs?: Expression|Variable|number,
+      strength: number = Strength.required,
+    ) {
+        this.strength = Strength.clip(strength);
+        if ((rhs === undefined) && (expression instanceof Expression)) {
+            this.expression = expression;
+        } else {
+            this.expression = expression.minus(rhs);
+        }
     }
 
     public toString(): string {
-        return this._expression.toString() + " " + ["<=", ">=", "="][this._operator] + " 0 (" + this._strength.toString() + ")";
+        return this.expression.toString() + " "
+        + Operator[this.operator]
+        + " 0 (" + this.strength.toString() + ")";
     }
 
-    private _expression: Expression;
-    private _operator: Operator;
-    private _strength: number;
-    private _id: number = CnId++;
 }
 
 /**

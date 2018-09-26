@@ -16,34 +16,20 @@ import { Expression } from "./expression";
  */
 export
 class Variable {
-    constructor(name: string = "") {
-        this._name = name;
-    }
 
     /**
      * A static variable comparison function.
      * @private
      */
-    public static Compare( a: Variable, b: Variable ): number {
-        return a.id() - b.id();
+    public static Compare(a: Variable, b: Variable): number {
+        return a.id - b.id;
     }
 
-    /**
-     * Returns the unique id number of the variable.
-     * @private
-     */
-    public id(): number {
-        return this._id;
-    }
+    public value: number = 0.0;
+    public context: any = null;
+    public id: number = VarId++;
 
-    /**
-     * Returns the name of the variable.
-     *
-     * @return {String} name of the variable
-     */
-    public name(): string {
-        return this._name;
-    }
+    constructor(public name: string = "") {}
 
     /**
      * Set the name of the variable.
@@ -51,15 +37,7 @@ class Variable {
      * @param {String} name Name of the variable
      */
     public setName( name: string ): void {
-        this._name = name;
-    }
-
-    /**
-     * Returns the user context object of the variable.
-     * @private
-     */
-    public context(): any {
-        return this._context;
+        this.name = name;
     }
 
     /**
@@ -67,16 +45,7 @@ class Variable {
      * @private
      */
     public setContext( context: any ): void {
-        this._context = context;
-    }
-
-    /**
-     * Returns the value of the variable.
-     *
-     * @return {Number} Calculated value
-     */
-    public value(): number {
-        return this._value;
+        this.context = context;
     }
 
     /**
@@ -84,7 +53,7 @@ class Variable {
      * @private
      */
     public setValue( value: number ): void {
-        this._value = value;
+        this.value = value;
     }
 
     /**
@@ -135,19 +104,15 @@ class Variable {
      */
     public toJSON(): any {
         return {
-            name: this._name,
-            value: this._value,
+            name: this.name,
+            value: this.value,
         };
     }
 
     public toString(): string {
-        return this._context + "[" + this._name + ":" + this._value + "]";
+        return this.context + "[" + this.name + ":" + this.value + "]";
     }
 
-    private _name: string;
-    private _value: number = 0.0;
-    private _context: any = null;
-    private _id: number = VarId++;
 }
 
 /**

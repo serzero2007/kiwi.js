@@ -26,29 +26,15 @@ import { Variable } from "./variable";
  */
 export
 class Expression {
+
+    public terms: IMap<Variable, number>;
+    public constant: number;
+
     constructor( ...args: any[] );
     constructor() {
         let parsed = parseArgs( arguments );
-        this._terms = parsed.terms;
-        this._constant = parsed.constant;
-    }
-
-    /**
-     * Returns the mapping of terms in the expression.
-     *
-     * This *must* be treated as const.
-     * @private
-     */
-    public terms(): IMap<Variable, number> {
-        return this._terms;
-    }
-
-    /**
-     * Returns the constant of the expression.
-     * @private
-     */
-    public constant(): number {
-        return this._constant;
+        this.terms = parsed.terms;
+        this.constant = parsed.constant;
     }
 
     /**
@@ -57,11 +43,11 @@ class Expression {
      * @private
      * @return {Number} computed value of the expression
      */
-    public value(): number {
-        let result = this._constant;
-        for ( let i = 0, n = this._terms.size(); i < n; i++ ) {
-            let pair = this._terms.itemAt(i);
-            result += pair.first.value() * pair.second;
+    public get value(): number {
+        let result = this.constant;
+        for ( let i = 0, n = this.terms.size(); i < n; i++ ) {
+            let pair = this.terms.itemAt(i);
+            result += pair.first.value * pair.second;
         }
         return result;
     }
@@ -109,25 +95,23 @@ class Expression {
     }
 
     public isConstant(): boolean {
-        return this._terms.size() == 0;
+        return this.terms.size() === 0;
     }
 
     public toString(): string {
-        let result = this._terms.array.map(function(pair, idx) {
+        let result = this.terms.array.map((pair, idx) => {
             return (pair.second + "*" + pair.first.toString());
         }).join(" + ");
 
-        if (!this.isConstant() && this._constant !== 0) {
+        if (!this.isConstant() && this.constant !== 0) {
             result += " + ";
         }
 
-        result += this._constant;
+        result += this.constant;
 
         return result;
     }
 
-    private _terms: IMap<Variable, number>;
-    private _constant: number;
 }
 
 /**
@@ -153,8 +137,8 @@ function parseArgs( args: IArguments ): IParseResult {
         } else if ( item instanceof Variable ) {
             terms.setDefault( item, factory ).second += 1.0;
         } else if (item instanceof Expression) {
-            constant += item.constant();
-            let terms2 = item.terms();
+            constant += item.constant;
+            let terms2 = item.terms;
             for (let j = 0, k = terms2.size(); j < k; j++) {
                 let termPair = terms2.itemAt(j);
                 terms.setDefault(termPair.first, factory).second += termPair.second;
@@ -171,8 +155,8 @@ function parseArgs( args: IArguments ): IParseResult {
             if (value2 instanceof Variable) {
                 terms.setDefault(value2, factory).second += value;
             } else if (value2 instanceof Expression) {
-                constant += (value2.constant() * value);
-                let terms2 = value2.terms();
+                constant += (value2.constant * value);
+                let terms2 = value2.terms;
                 for (let j = 0, k = terms2.size(); j < k; j++) {
                     let termPair = terms2.itemAt(j);
                     terms.setDefault(termPair.first, factory).second += (termPair.second * value);

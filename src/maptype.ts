@@ -6,14 +6,14 @@
 | The full license is in the file COPYING.txt, distributed with this software.
 |----------------------------------------------------------------------------*/
 
-export interface IMap<T extends { id(): number }, U> extends IndexedMap<T, U> { }
+export interface IMap<T extends { id: number }, U> extends IndexedMap<T, U> { }
 
 export
-function createMap<T extends { id(): number }, U>( compare: any ): IMap<T, U> {
+function createMap<T extends { id: number }, U>( compare: any ): IMap<T, U> {
     return new IndexedMap<T, U>();
 }
 
-class IndexedMap<T extends { id(): number }, U> {
+export class IndexedMap<T extends { id: number }, U> {
     public index = {} as { [ id: number ]: number | undefined };
     public array = [] as Array<Pair<T, U>>;
 
@@ -46,7 +46,7 @@ class IndexedMap<T extends { id(): number }, U> {
      * @param key The key to locate in the array.
      */
     public contains(key: T) {
-        return this.index[key.id()] !== undefined;
+        return this.index[key.id] !== undefined;
     }
 
     /**
@@ -55,7 +55,7 @@ class IndexedMap<T extends { id(): number }, U> {
      * @param key The key to locate in the array.
      */
     public find(key: T) {
-        const i = this.index[key.id()];
+        const i = this.index[key.id];
         return i === undefined ? undefined : this.array[i];
     }
 
@@ -69,10 +69,10 @@ class IndexedMap<T extends { id(): number }, U> {
      * @param factory The function which creates the default value.
      */
     public setDefault(key: T, factory: () => U): Pair<T, U> {
-        const i = this.index[key.id()];
+        const i = this.index[key.id];
         if (i === undefined) {
             const pair = new Pair(key, factory());
-            this.index[key.id()] = this.array.length;
+            this.index[key.id] = this.array.length;
             this.array.push(pair);
             return pair;
         } else {
@@ -90,9 +90,9 @@ class IndexedMap<T extends { id(): number }, U> {
      */
     public insert(key: T, value: U): Pair<T, U> {
         const pair = new Pair(key, value);
-        const i = this.index[key.id()];
+        const i = this.index[key.id];
         if (i === undefined) {
-            this.index[key.id()] = this.array.length;
+            this.index[key.id] = this.array.length;
             this.array.push(pair);
         } else {
             this.array[i] = pair;
@@ -106,16 +106,16 @@ class IndexedMap<T extends { id(): number }, U> {
      * @param key The key to remove from the map.
      */
     public erase(key: T): Pair<T, U> {
-        const i = this.index[key.id()];
+        const i = this.index[key.id];
         if (i === undefined) {
             return undefined;
         }
-        this.index[key.id()] = undefined;
+        this.index[key.id] = undefined;
         const pair = this.array[i];
         const last = this.array.pop();
         if (pair !== last) {
             this.array[i] = last;
-            this.index[last.first.id()] = i;
+            this.index[last.first.id] = i;
         }
         return pair;
     }
@@ -128,7 +128,7 @@ class IndexedMap<T extends { id(): number }, U> {
         for (let i = 0; i < this.array.length; i++) {
             const pair = this.array[i].copy();
             copy.array[i] = pair;
-            copy.index[pair.first.id()] = i;
+            copy.index[pair.first.id] = i;
         }
         return copy;
     }
@@ -139,7 +139,7 @@ class IndexedMap<T extends { id(): number }, U> {
  * @private
  */
 // tslint:disable: max-classes-per-file
-class Pair<T, U> {
+export class Pair<T, U> {
     /**
      * Construct a new Pair object.
      *
