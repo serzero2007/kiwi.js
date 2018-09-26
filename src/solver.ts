@@ -12,7 +12,7 @@ import { createMap, IMap } from "./maptype";
 import { Strength } from "./strength";
 import { Variable } from "./variable";
 import { ISymbol, ISymbolType, INVALID_SYMBOL } from "./isymbol";
-import { Row } from "./row";
+import { Row } from "./Row";
 
 /**
  * The constraint solver class.
@@ -64,12 +64,10 @@ class Solver {
         // this represents redundant constraints and the new dummy
         // marker can enter the basis. If the constant is non-zero,
         // then it represents an unsatisfiable constraint.
-        if ( subject.type === ISymbolType.Invalid && row.allDummies() ) {
-            if ( !nearZero( row.constant ) ) {
+        if (subject.type === ISymbolType.Invalid && row.allDummies() ) {
+            if (!nearZero( row.constant ))
                 throw new Error( "unsatisfiable constraint" );
-            } else {
-                subject = tag.marker;
-            }
+            subject = tag.marker;
         }
 
         // If an entering symbol still isn't found, then the row must
@@ -286,21 +284,23 @@ class Solver {
         const terms = expr.terms;
         for ( let i = 0, n = terms.size(); i < n; ++i ) {
             let termPair = terms.itemAt( i );
-            if ( !nearZero( termPair.second ) ) {
-                let symbol = this._getVarISymbol( termPair.first );
-                let basicPair = this.rows.find( symbol );
-                if ( basicPair !== undefined ) {
-                    row.insertRow( basicPair.second, termPair.second );
-                } else {
-                    row.insertISymbol( symbol, termPair.second );
-                }
+            if (nearZero( termPair.second )) continue
+            let symbol = this._getVarISymbol( termPair.first );
+            let basicPair = this.rows.find( symbol );
+            if ( basicPair !== undefined ) {
+                row.insertRow( basicPair.second, termPair.second );
+            } else {
+                row.insertISymbol( symbol, termPair.second );
             }
         }
 
         // Add the necessary slack, error, and dummy variables.
         const objective = this.objective;
         const strength = constraint.strength;
-        const tag = { marker: INVALID_SYMBOL, other: INVALID_SYMBOL };
+        const tag = {
+          marker: INVALID_SYMBOL,
+          other: INVALID_SYMBOL
+        };
         switch (constraint.operator) {
             case Operator.Le:
             case Operator.Ge:
@@ -422,10 +422,10 @@ class Solver {
 
         // Remove the artificial variable from the tableau.
         let rows = this.rows;
-        for ( let i = 0, n = rows.size(); i < n; ++i ) {
-            rows.itemAt( i ).second.removeISymbol( art );
-        }
-        this.objective.removeISymbol( art );
+
+        rows.map(p => p.second.removeISymbol(art));
+        this.objective.removeISymbol(art);
+
         return success;
     }
 
