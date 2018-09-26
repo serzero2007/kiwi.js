@@ -63,10 +63,10 @@ export class IndexedMap<T extends { id: number }, U> {
      * Returns the pair associated with the key if it exists.
      *
      * If the key does not exist, a new pair will be created and
-     * inserted using the value created by the given factory.
+     * inserted using the value created by the given value.
      *
      * @param key The key to locate in the array.
-     * @param factory The function which creates the default value.
+     * @param value default
      */
     public setDefault(key: T, value: U): Pair<T, U> {
         const i = this.index[key.id];
