@@ -68,10 +68,10 @@ export class IndexedMap<T extends { id: number }, U> {
      * @param key The key to locate in the array.
      * @param factory The function which creates the default value.
      */
-    public setDefault(key: T, factory: () => U): Pair<T, U> {
+    public setDefault(key: T, value: U): Pair<T, U> {
         const i = this.index[key.id];
         if (i === undefined) {
-            const pair = new Pair(key, factory());
+            const pair = new Pair(key, value);
             this.index[key.id] = this.array.length;
             this.array.push(pair);
             return pair;

@@ -256,7 +256,7 @@ class Solver {
      */
     private _getVarISymbol( variable: Variable ): ISymbol {
       const symbol = this._makeISymbol( ISymbolType.External );
-        return this.vars.setDefault( variable, () => symbol ).second;
+      return this.vars.setDefault( variable, symbol ).second;
     }
 
     /**
@@ -360,7 +360,7 @@ class Solver {
      * @private
      */
     private _chooseSubject( row: Row, tag: ITag ): ISymbol {
-        let cells = row.cells();
+        let cells = row.cells;
         for ( let i = 0, n = cells.size(); i < n; ++i ) {
             let pair = cells.itemAt( i );
             if ( pair.first.type === ISymbolType.External ) {
@@ -519,7 +519,7 @@ class Solver {
      * @private
      */
     private _getEnteringISymbol( objective: Row ): ISymbol {
-        let cells = objective.cells();
+        let cells = objective.cells;
         for ( let i = 0, n = cells.size(); i < n; ++i ) {
             let pair = cells.itemAt( i );
             let symbol = pair.first;
@@ -544,7 +544,7 @@ class Solver {
     private _getDualEnteringISymbol( row: Row ): ISymbol {
         let ratio = Number.MAX_VALUE;
         let entering = INVALID_SYMBOL;
-        let cells = row.cells();
+        let cells = row.cells;
         for ( let i = 0, n = cells.size(); i < n; ++i ) {
             let pair = cells.itemAt( i );
             let symbol = pair.first;
@@ -692,7 +692,7 @@ class Solver {
      * @private
      */
     private _anyPivotableISymbol( row: Row ): ISymbol {
-        const cells = row.cells();
+        const cells = row.cells;
         for ( let i = 0, n = cells.size(); i < n; ++i ) {
             const pair = cells.itemAt( i );
             const type = pair.first.type;
@@ -841,24 +841,17 @@ class Row {
     constructor(public constant: number = 0.0 ) {}
 
     /**
-     * Returns the mapping of symbols to coefficients.
-     */
-    public cells(): IMap<ISymbol, number> {
-        return this._cellMap;
-    }
-
-    /**
      * Returns true if the row is a constant value.
      */
     public isConstant(): boolean {
-        return this._cellMap.empty();
+        return this.cells.empty();
     }
 
     /**
      * Returns true if the Row has all dummy symbols.
      */
     public allDummies(): boolean {
-        let cells = this._cellMap;
+        let cells = this.cells;
         for ( let i = 0, n = cells.size(); i < n; ++i ) {
             let pair = cells.itemAt( i );
             if ( pair.first.type !== ISymbolType.Dummy ) {
@@ -873,7 +866,7 @@ class Row {
      */
     public copy(): Row {
         let theCopy = new Row( this.constant );
-        theCopy._cellMap = this._cellMap.copy();
+        theCopy.cells = this.cells.copy();
         return theCopy;
     }
 
@@ -894,10 +887,8 @@ class Row {
      * coefficient is zero, the symbol will be removed from the row.
      */
     public insertISymbol( symbol: ISymbol, coefficient: number = 1.0 ): void {
-        let pair = this._cellMap.setDefault( symbol, () => 0.0 );
-        if ( nearZero( pair.second += coefficient ) ) {
-            this._cellMap.erase( symbol );
-        }
+        let pair = this.cells.setDefault( symbol, coefficient );
+        if (nearZero(pair.second)) this.cells.erase( symbol );
     }
 
     /**
@@ -910,18 +901,16 @@ class Row {
      */
     public insertRow( other: Row, coefficient: number = 1.0 ): void {
         this.constant += other.constant * coefficient;
-        let cells = other._cellMap;
-        for ( let i = 0, n = cells.size(); i < n; ++i ) {
-            let pair = cells.itemAt( i );
-            this.insertISymbol( pair.first, pair.second * coefficient );
-        }
+        other.cells.map(pair => {
+          this.insertISymbol( pair.first, pair.second * coefficient );
+        })
     }
 
     /**
      * Remove a symbol from the row.
      */
     public removeISymbol( symbol: ISymbol ): void {
-        this._cellMap.erase( symbol );
+        this.cells.erase( symbol );
     }
 
     /**
@@ -929,11 +918,9 @@ class Row {
      */
     public reverseSign(): void {
         this.constant = -this.constant;
-        let cells = this._cellMap;
-        for ( let i = 0, n = cells.size(); i < n; ++i ) {
-            let pair = cells.itemAt( i );
-            pair.second = -pair.second;
-        }
+        this.cells.map(pair => {
+          pair.second = -pair.second;
+        })
     }
 
     /**
@@ -949,13 +936,11 @@ class Row {
      * The given symbol *must* exist in the row.
      */
     public solveFor( symbol: ISymbol ): void {
-        let cells = this._cellMap;
-        let pair = cells.erase( symbol );
+        let pair = this.cells.erase( symbol );
         let coeff = -1.0 / pair.second;
+
         this.constant *= coeff;
-        for ( let i = 0, n = cells.size(); i < n; ++i ) {
-            cells.itemAt( i ).second *= coeff;
-        }
+        this.cells.map(p => { p.second *= coeff })
     }
 
     /**
@@ -979,7 +964,7 @@ class Row {
      * Returns the coefficient for the given symbol.
      */
     public coefficientFor( symbol: ISymbol ): number {
-        let pair = this._cellMap.find( symbol );
+        let pair = this.cells.find( symbol );
         return pair !== undefined ? pair.second : 0.0;
     }
 
@@ -993,11 +978,11 @@ class Row {
      * If the symbol does not exist in the row, this is a no-op.
      */
     public substitute( symbol: ISymbol, row: Row ): void {
-        let pair = this._cellMap.erase( symbol );
+        let pair = this.cells.erase( symbol );
         if ( pair !== undefined ) {
             this.insertRow( row, pair.second );
         }
     }
 
-    private _cellMap = createMap<ISymbol, number>( ISymbol.Compare );
+    public cells = createMap<ISymbol, number>( ISymbol.Compare );
 }

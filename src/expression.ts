@@ -122,7 +122,6 @@ interface IParseResult {
  */
 function parseArgs( args: any[] ): IParseResult {
     let constant = 0.0;
-    let factory = () => 0.0;
     let terms = createMap<Variable, number>( Variable.Compare );
     for ( let i = 0, n = args.length; i < n; ++i ) {
         let item = args[ i ];
@@ -132,7 +131,7 @@ function parseArgs( args: any[] ): IParseResult {
         }
 
         if ( item instanceof Variable ) {
-            terms.setDefault(item, () => 1.0)
+            terms.setDefault(item, 1.0)
             continue
         }
 
@@ -141,7 +140,7 @@ function parseArgs( args: any[] ): IParseResult {
             let terms2 = item.terms;
             for (let j = 0, k = terms2.size(); j < k; j++) {
                 let termPair = terms2.itemAt(j);
-                terms.setDefault(termPair.first, () => termPair.second)
+                terms.setDefault(termPair.first, termPair.second)
             }
             continue
         }
@@ -156,13 +155,13 @@ function parseArgs( args: any[] ): IParseResult {
                 throw new Error( "array item 0 must be a number" );
             }
             if (value2 instanceof Variable) {
-                terms.setDefault(value2, () => value)
+                terms.setDefault(value2, value)
             } else if (value2 instanceof Expression) {
                 constant += (value2.constant * value);
                 let terms2 = value2.terms;
                 for (let j = 0, k = terms2.size(); j < k; j++) {
                     let termPair = terms2.itemAt(j);
-                    terms.setDefault(termPair.first, () => termPair.second * value)
+                    terms.setDefault(termPair.first, termPair.second * value)
                 }
             } else {
                 throw new Error("array item 1 must be a variable or expression");
