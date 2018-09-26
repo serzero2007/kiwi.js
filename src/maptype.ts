@@ -110,7 +110,7 @@ export class IndexedMap<T extends { id: number }, U> {
         if (i === undefined) {
             return undefined;
         }
-        this.index[key.id] = undefined;
+        delete this.index[key.id];
         const pair = this.array[i];
         const last = this.array.pop();
         if (pair !== last) {
@@ -131,6 +131,13 @@ export class IndexedMap<T extends { id: number }, U> {
             copy.index[pair.first.id] = i;
         }
         return copy;
+    }
+
+    /**
+     * Create a copy of this associative array.
+     */
+    public map<R>(callback: (pair: Pair<T, U>) => R): R[] {
+      return this.array.map(item => callback(item))
     }
 }
 

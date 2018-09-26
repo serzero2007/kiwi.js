@@ -8,7 +8,11 @@
       "max-classes-per-file": 5,
       "prefer-const": false,
       "member-ordering": false,
-      "variable-name": false 
+      "variable-name": false,
+      "semicolon": false,
+      "trailing-comma": false,
+      "curvy": false,
+      "arrow-parens": false
     },
     "rulesDirectory": []
 }

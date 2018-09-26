@@ -43,12 +43,9 @@ class Expression {
      * @return {Number} computed value of the expression
      */
     public get value(): number {
-        let result = this.constant;
-        for ( let i = 0, n = this.terms.size(); i < n; i++ ) {
-            let pair = this.terms.itemAt(i);
-            result += pair.first.value * pair.second;
-        }
-        return result;
+        return this.constant +
+               this.terms.map(p => p.first.value * p.second)
+                         .reduce((a, b) => a + b)
     }
 
     /**
@@ -98,17 +95,15 @@ class Expression {
     }
 
     public toString(): string {
-        let result = this.terms.array.map((pair, idx) => {
-            return (pair.second + "*" + pair.first.toString());
-        }).join(" + ");
+        let result = this.terms.map(
+          (pair) => pair.second + "*" + pair.first.toString()
+        )
 
-        if (!this.isConstant() && this.constant !== 0) {
-            result += " + ";
+        if (this.constant !== 0) {
+            result.push(this.constant.toString())
         }
 
-        result += this.constant;
-
-        return result;
+        return result.join(" + ");
     }
 
 }
@@ -133,16 +128,25 @@ function parseArgs( args: any[] ): IParseResult {
         let item = args[ i ];
         if ( typeof item === "number" ) {
             constant += item;
-        } else if ( item instanceof Variable ) {
-            terms.setDefault( item, factory ).second += 1.0;
-        } else if (item instanceof Expression) {
+            continue
+        }
+
+        if ( item instanceof Variable ) {
+            terms.setDefault(item, () => 1.0)
+            continue
+        }
+
+        if (item instanceof Expression) {
             constant += item.constant;
             let terms2 = item.terms;
             for (let j = 0, k = terms2.size(); j < k; j++) {
                 let termPair = terms2.itemAt(j);
-                terms.setDefault(termPair.first, factory).second += termPair.second;
+                terms.setDefault(termPair.first, () => termPair.second)
             }
-        } else if ( item instanceof Array ) {
+            continue
+        }
+
+        if ( item instanceof Array ) {
             if ( item.length !== 2 ) {
                 throw new Error( "array must have length 2" );
             }
@@ -152,20 +156,21 @@ function parseArgs( args: any[] ): IParseResult {
                 throw new Error( "array item 0 must be a number" );
             }
             if (value2 instanceof Variable) {
-                terms.setDefault(value2, factory).second += value;
+                terms.setDefault(value2, () => value)
             } else if (value2 instanceof Expression) {
                 constant += (value2.constant * value);
                 let terms2 = value2.terms;
                 for (let j = 0, k = terms2.size(); j < k; j++) {
                     let termPair = terms2.itemAt(j);
-                    terms.setDefault(termPair.first, factory).second += (termPair.second * value);
+                    terms.setDefault(termPair.first, () => termPair.second * value)
                 }
             } else {
                 throw new Error("array item 1 must be a variable or expression");
             }
-        } else {
-            throw new Error( "invalid Expression argument: " + item );
+            continue
         }
+
+        throw new Error( "invalid Expression argument: " + item );
     }
     return { terms, constant };
 }

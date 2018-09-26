@@ -255,8 +255,8 @@ class Solver {
      * @private
      */
     private _getVarISymbol( variable: Variable ): ISymbol {
-        const factory = () => this._makeISymbol( ISymbolType.External );
-        return this.vars.setDefault( variable, factory ).second;
+      const symbol = this._makeISymbol( ISymbolType.External );
+        return this.vars.setDefault( variable, () => symbol ).second;
     }
 
     /**
