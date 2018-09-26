@@ -20,9 +20,9 @@ describe("kiwi", function() {
             var var2 = new kiwi.Variable("somename");
             assert.equal(var2.name, "somename");
         });
-        it("variable.setName('skiwi') => name: 'skiwi'", function() {
+        it("set variable.name", function() {
             var var2 = new kiwi.Variable();
-            var2.setName("skiwi");
+            var2.name = "skiwi";
             assert.equal(var2.name, "skiwi");
         });
         it("solver.addEditVariable(variable, Strength.strong) => solver.hasEditVariable(): true", function() {
