@@ -30,9 +30,8 @@ class Expression {
     public terms: IMap<Variable, number>;
     public constant: number;
 
-    constructor( ...args: any[] );
-    constructor() {
-        let parsed = parseArgs( arguments );
+    constructor( ...args: any[] ) {
+        let parsed = parseArgs( args );
         this.terms = parsed.terms;
         this.constant = parsed.constant;
     }
@@ -126,7 +125,7 @@ interface IParseResult {
  * An internal argument parsing function.
  * @private
  */
-function parseArgs( args: IArguments ): IParseResult {
+function parseArgs( args: any[] ): IParseResult {
     let constant = 0.0;
     let factory = () => 0.0;
     let terms = createMap<Variable, number>( Variable.Compare );

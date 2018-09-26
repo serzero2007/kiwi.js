@@ -43,8 +43,7 @@ class Solver {
      * @param {Constraint} constraint Constraint to add to the solver
      */
     public addConstraint(constraint: Constraint): void {
-        const cnPair = this._cnMap.find(constraint);
-        if (cnPair !== undefined) {
+        if (this.constraints.find(constraint) !== undefined) {
             throw new Error("duplicate constraint");
         }
 
@@ -54,9 +53,7 @@ class Solver {
         // Since its likely that those variables will be used in other
         // constraints and since exceptional conditions are uncommon,
         // i'm not too worried about aggressive cleanup of the var map.
-        const data = this._createRow( constraint );
-        const row = data.row;
-        const tag = data.tag;
+        const { row, tag } = this._createRow(constraint);
         let subject = this._chooseSubject( row, tag );
 
         // If chooseSubject couldnt find a valid entering symbol, one
@@ -83,15 +80,15 @@ class Solver {
         } else {
             row.solveFor( subject );
             this._substitute( subject, row );
-            this._rowMap.insert( subject, row );
+            this.rows.insert( subject, row );
         }
 
-        this._cnMap.insert( constraint, tag );
+        this.constraints.insert( constraint, tag );
 
         // Optimizing after each constraint is added performs less
         // aggregate work due to a smaller average system size. It
         // also ensures the solver remains in a consistent state.
-        this._optimize( this._objective );
+        this._optimize( this.objective );
     }
 
     /**
@@ -100,26 +97,28 @@ class Solver {
      * @param {Constraint} constraint Constraint to remove from the solver
      */
     public removeConstraint( constraint: Constraint ): void {
-        const cnPair = this._cnMap.erase( constraint );
+        const cnPair = this.constraints.erase( constraint );
         if ( cnPair === undefined ) {
             throw new Error( "unknown constraint" );
         }
+        const cnTag = cnPair.second;
 
         // Remove the error effects from the objective function
         // *before* pivoting, or substitutions into the objective
         // will lead to incorrect solver results.
-        this._removeConstraintEffects( constraint, cnPair.second );
+        this._removeConstraintEffects(constraint,  cnTag);
 
         // If the marker is basic, simply drop the row. Otherwise,
         // pivot the marker into the basis and then drop the row.
-        const marker = cnPair.second.marker;
-        let rowPair = this._rowMap.erase( marker );
+        const { marker } = cnTag;
+        let rowPair = this.rows.erase( marker );
+
         if ( rowPair === undefined ) {
             const leaving = this._getMarkerLeavingISymbol( marker );
             if ( leaving.type === ISymbolType.Invalid ) {
                 throw new Error( "failed to find leaving row" );
             }
-            rowPair = this._rowMap.erase( leaving );
+            rowPair = this.rows.erase( leaving );
             rowPair.second.solveForEx( leaving, marker );
             this._substitute( marker, rowPair.second );
         }
@@ -127,7 +126,7 @@ class Solver {
         // Optimizing after each constraint is removed ensures that the
         // solver remains consistent. It makes the solver api easier to
         // use at a small tradeoff for speed.
-        this._optimize( this._objective );
+        this._optimize( this.objective );
     }
 
     /**
@@ -137,7 +136,7 @@ class Solver {
      * @return {Bool} true or false
      */
     public hasConstraint( constraint: Constraint ): boolean {
-        return this._cnMap.contains( constraint );
+        return this.constraints.contains( constraint );
     }
 
     /**
@@ -147,20 +146,20 @@ class Solver {
      * @param {Number} strength Strength, should be less than `Strength.required`
      */
     public addEditVariable( variable: Variable, strength: number ): void {
-        const editPair = this._editMap.find( variable );
+        const editPair = this.edits.find( variable );
         if ( editPair !== undefined ) {
             throw new Error( "duplicate edit variable" );
         }
         strength = Strength.clip( strength );
         if ( strength === Strength.required ) {
-            throw new Error( "bad required strength" );
+            throw new Error( "bad strength" );
         }
         const expr = new Expression( variable );
         const cn = new Constraint( expr, Operator.Eq, undefined, strength );
         this.addConstraint( cn );
-        const tag = this._cnMap.find( cn ).second;
-        const info = { tag, constraint: cn, constant: 0.0 };
-        this._editMap.insert( variable, info );
+        const tag = this.constraints.find( cn ).second;
+
+        this.edits.insert( variable, { tag, constraint: cn, constant: 0.0 } );
     }
 
     /**
@@ -169,7 +168,7 @@ class Solver {
      * @param {Variable} variable Edit variable to remove from the solver
      */
     public removeEditVariable( variable: Variable ): void {
-        const editPair = this._editMap.erase( variable );
+        const editPair = this.edits.erase( variable );
         if ( editPair === undefined ) {
             throw new Error( "unknown edit variable" );
         }
@@ -183,7 +182,7 @@ class Solver {
      * @return {Bool} true or false
      */
     public hasEditVariable( variable: Variable ): boolean {
-        return this._editMap.contains( variable );
+        return this.edits.contains( variable );
     }
 
     /**
@@ -193,12 +192,12 @@ class Solver {
      * @param {Number} value Suggested value
      */
     public suggestValue( variable: Variable, value: number ): void {
-        const editPair = this._editMap.find( variable );
+        const editPair = this.edits.find( variable );
         if ( editPair === undefined ) {
             throw new Error( "unknown edit variable" );
         }
 
-        const rows = this._rowMap;
+        const rows = this.rows;
         const info = editPair.second;
         const delta = value - info.constant;
         info.constant = value;
@@ -242,16 +241,10 @@ class Solver {
      * Update the values of the variables.
      */
     public updateVariables(): void {
-        const vars = this._varMap;
-        const rows = this._rowMap;
-        for ( let i = 0, n = vars.size(); i < n; ++i ) {
-            const pair = vars.itemAt( i );
-            const rowPair = rows.find( pair.second );
-            if ( rowPair !== undefined ) {
-                pair.first.setValue( rowPair.second.constant );
-            } else {
-                pair.first.setValue( 0.0 );
-            }
+        for ( let i = 0, n = this.vars.size(); i < n; ++i ) {
+            const pair = this.vars.itemAt( i );
+            const rowPair = this.rows.find( pair.second );
+            pair.first.value = rowPair ? rowPair.second.constant : 0.0;
         }
     }
 
@@ -263,7 +256,7 @@ class Solver {
      */
     private _getVarISymbol( variable: Variable ): ISymbol {
         const factory = () => this._makeISymbol( ISymbolType.External );
-        return this._varMap.setDefault( variable, factory ).second;
+        return this.vars.setDefault( variable, factory ).second;
     }
 
     /**
@@ -293,7 +286,7 @@ class Solver {
             let termPair = terms.itemAt( i );
             if ( !nearZero( termPair.second ) ) {
                 let symbol = this._getVarISymbol( termPair.first );
-                let basicPair = this._rowMap.find( symbol );
+                let basicPair = this.rows.find( symbol );
                 if ( basicPair !== undefined ) {
                     row.insertRow( basicPair.second, termPair.second );
                 } else {
@@ -303,7 +296,7 @@ class Solver {
         }
 
         // Add the necessary slack, error, and dummy variables.
-        const objective = this._objective;
+        const objective = this.objective;
         const strength = constraint.strength;
         const tag = { marker: INVALID_SYMBOL, other: INVALID_SYMBOL };
         switch (constraint.operator) {
@@ -399,7 +392,7 @@ class Solver {
     private _addWithArtificialVariable( row: Row ): boolean {
         // Create and add the artificial variable to the tableau.
         let art = this._makeISymbol( ISymbolType.Slack );
-        this._rowMap.insert( art, row.copy() );
+        this.rows.insert( art, row.copy() );
         this._artificial = row.copy();
 
         // Optimize the artificial objective. This is successful
@@ -410,7 +403,7 @@ class Solver {
 
         // If the artificial variable is basic, pivot the row so that
         // it becomes non-basic. If the row is constant, exit early.
-        let pair = this._rowMap.erase( art );
+        let pair = this.rows.erase( art );
         if ( pair !== undefined ) {
             let basicRow = pair.second;
             if ( basicRow.isConstant() ) {
@@ -422,15 +415,15 @@ class Solver {
             }
             basicRow.solveForEx( art, entering );
             this._substitute( entering, basicRow );
-            this._rowMap.insert( entering, basicRow );
+            this.rows.insert( entering, basicRow );
         }
 
         // Remove the artificial variable from the tableau.
-        let rows = this._rowMap;
+        let rows = this.rows;
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             rows.itemAt( i ).second.removeISymbol( art );
         }
-        this._objective.removeISymbol( art );
+        this.objective.removeISymbol( art );
         return success;
     }
 
@@ -443,7 +436,7 @@ class Solver {
      * @private
      */
     private _substitute( symbol: ISymbol, row: Row ): void {
-        let rows = this._rowMap;
+        let rows = this.rows;
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             let pair = rows.itemAt( i );
             pair.second.substitute( symbol, row );
@@ -452,7 +445,7 @@ class Solver {
                 this._infeasibleRows.push( pair.first );
             }
         }
-        this._objective.substitute( symbol, row );
+        this.objective.substitute( symbol, row );
         if ( this._artificial ) {
             this._artificial.substitute( symbol, row );
         }
@@ -477,10 +470,10 @@ class Solver {
                 throw new Error( "the objective is unbounded" );
             }
             // pivot the entering symbol into the basis
-            let row = this._rowMap.erase( leaving ).second;
+            let row = this.rows.erase( leaving ).second;
             row.solveForEx( leaving, entering );
             this._substitute( entering, row );
-            this._rowMap.insert( entering, row );
+            this.rows.insert( entering, row );
         }
     }
 
@@ -495,7 +488,7 @@ class Solver {
      * @private
      */
     private _dualOptimize(): void {
-        let rows = this._rowMap;
+        let rows = this.rows;
         let infeasible = this._infeasibleRows;
         while ( infeasible.length !== 0 ) {
             let leaving = infeasible.pop();
@@ -557,7 +550,7 @@ class Solver {
             let symbol = pair.first;
             let c = pair.second;
             if ( c > 0.0 && symbol.type !== ISymbolType.Dummy ) {
-                let coeff = this._objective.coefficientFor( symbol );
+                let coeff = this.objective.coefficientFor( symbol );
                 let r = coeff / c;
                 if ( r < ratio ) {
                     ratio = r;
@@ -581,7 +574,7 @@ class Solver {
     private _getLeavingISymbol( entering: ISymbol ): ISymbol {
         let ratio = Number.MAX_VALUE;
         let found = INVALID_SYMBOL;
-        let rows = this._rowMap;
+        let rows = this.rows;
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             let pair = rows.itemAt( i );
             let symbol = pair.first;
@@ -629,7 +622,7 @@ class Solver {
         let first = invalid;
         let second = invalid;
         let third = invalid;
-        const rows = this._rowMap;
+        const rows = this.rows;
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             const pair = rows.itemAt( i );
             const row = pair.second;
@@ -683,11 +676,11 @@ class Solver {
      * @private
      */
     private _removeMarkerEffects( marker: ISymbol, strength: number ): void {
-        const pair = this._rowMap.find( marker );
+        const pair = this.rows.find( marker );
         if ( pair !== undefined ) {
-            this._objective.insertRow( pair.second, -strength );
+            this.objective.insertRow( pair.second, -strength );
         } else {
-            this._objective.insertISymbol( marker, -strength );
+            this.objective.insertISymbol( marker, -strength );
         }
     }
 
@@ -719,12 +712,12 @@ class Solver {
         return new ISymbol( type, this._idTick++ );
     }
 
-    private _cnMap = createCnMap();
-    private _rowMap = createRowMap();
-    private _varMap = createVarMap();
-    private _editMap = createEditMap();
+    private constraints = createCnMap();
+    private rows = createRowMap();
+    private vars = createVarMap();
+    private edits = createEditMap();
     private _infeasibleRows: ISymbol[] = [];
-    private _objective: Row = new Row();
+    private objective: Row = new Row();
     private _artificial: Row = null;
     private _idTick: number = 0;
 }

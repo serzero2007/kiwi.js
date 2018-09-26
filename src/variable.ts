@@ -10,12 +10,8 @@ import { Expression } from "./expression";
 
 /**
  * The primary user constraint variable.
- *
- * @class
- * @param {String} [name=""] The name to associated with the variable.
  */
-export
-class Variable {
+export class Variable {
 
     /**
      * A static variable comparison function.
@@ -25,36 +21,12 @@ class Variable {
         return a.id - b.id;
     }
 
-    public value: number = 0.0;
-    public context: any = null;
     public id: number = VarId++;
 
-    constructor(public name: string = "") {}
-
-    /**
-     * Set the name of the variable.
-     *
-     * @param {String} name Name of the variable
-     */
-    public setName( name: string ): void {
-        this.name = name;
-    }
-
-    /**
-     * Set the user context object of the variable.
-     * @private
-     */
-    public setContext( context: any ): void {
-        this.context = context;
-    }
-
-    /**
-     * Set the value of the variable.
-     * @private
-     */
-    public setValue( value: number ): void {
-        this.value = value;
-    }
+    constructor(
+      public name: string = "",
+      public value: number = 0.0,
+      public context: any = null) {}
 
     /**
      * Creates a new Expression by adding a number, variable or expression
