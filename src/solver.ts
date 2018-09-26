@@ -580,17 +580,18 @@ class Solver {
         for ( let i = 0, n = rows.size(); i < n; ++i ) {
             let pair = rows.itemAt( i );
             let symbol = pair.first;
-            if ( symbol.type !== ISymbolType.External ) {
-                let row = pair.second;
-                let temp = row.coefficientFor( entering );
-                if ( temp < 0.0 ) {
-                    let tempRatio = -row.constant / temp;
-                    if ( tempRatio < ratio ) {
-                        ratio = tempRatio;
-                        found = symbol;
-                    }
+            let row = pair.second;
+
+            if ( symbol.type === ISymbolType.External ) continue
+            let temp = row.coefficientFor( entering );
+            if ( temp < 0.0 ) {
+                let tempRatio = -row.constant / temp;
+                if ( tempRatio < ratio ) {
+                    ratio = tempRatio;
+                    found = symbol;
                 }
             }
+
         }
         return found;
     }
@@ -634,7 +635,6 @@ class Solver {
                 third = symbol;
                 continue
             }
-
             if (c < 0.0 && r < r1) { r1 = r; first = symbol; }
             if (c > 0.0 && r < r2) { r2 = r; second = symbol; }
         }
